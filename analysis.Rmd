@@ -1,0 +1,164 @@
+---
+title: "TopGolf Analysis"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: scroll
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(ggplot2)
+library(dplyr)
+library(readr)
+ballsPerGame <- 20
+data <- readr::read_csv("output.csv")
+# Separate object to get aggregate game data
+games <- data %>%
+  group_by(`Game ID`) %>%
+  arrange(`Game ID`) %>%
+  summarise(
+    Score = sum(Points), 
+    Hits = n(),
+    Misses = ballsPerGame - n(),
+    Time = first(Time),
+    Location = first(Location),
+    Bay = first(Location),
+    ID = first(`Game ID`)
+    ) %>%
+  mutate(Index = row_number())
+gamePlot = ggplot(games)
+```
+
+Game Data
+==========
+Column {data-width=2}
+----------
+### Games Played
+
+```{r}
+valueBox(nrow(games), icon="fa-golf-ball")
+```
+
+### High Score
+
+```{r}
+valueBox(max(games$Score), icon = "fa-medal")
+```
+
+### Mean Score
+
+```{r}
+valueBox(mean(games$Score))
+```
+
+### Strike Rate
+```{r}
+strikeRate <- sum(games$Hits) / (sum(games$Hits) + sum(games$Misses)) * 100
+gauge(strikeRate, min = 0, max = 100, symbol = "%", 
+      gaugeSectors(success = c(67,100), warning = c(34, 66), danger = c(0, 33)))
+```
+
+
+Column {data-width=3}
+-------------
+### Career Scores
+```{r, fig.width=5, fig.height=4}
+gamePlot + 
+  geom_col(aes(Index, Score)) +
+  labs(x = "Game Number")
+```
+
+### Scores By Location
+
+```{r, fig.width=5, fig.height=4}
+gamePlot +
+  geom_boxplot(aes(Location, Score, group = Location))
+```
+
+
+Column {data-width=3}
+----------
+
+### Career Average Progression
+
+```{r, fig.height=4, fig.width=5}
+gamePlot +
+  geom_line(aes(Index, cummean(Score))) +
+  labs(x = "Game Number", y = "Mean Career Score")
+```
+
+### Game Score Frequency (by 10)
+
+```{r, fig.width=5, fig.height=4}
+gamePlot +
+  geom_histogram(aes(Score), binwidth = 10) +
+  labs(x = "Score (by 10)", y = "Frequency")
+```
+
+
+Ball Data {data-orientation=rows}
+==========
+Ball-by-ball data only has data recorded for balls where points were scored. Therefore, averages may be overstated as it does include attempts where zero points were scored.
+
+Row
+----
+### Best Shot
+
+```{r}
+valueBox(max(data$Points))
+```
+
+### Hole In Ones
+
+```{r}
+holeInOnes <- data %>% filter(IsHoleInOne == 1) %>% count()
+valueBox(holeInOnes)
+```
+
+Row
+-----
+
+### Mean Points per Scored Ball
+
+```{r, fig.width=7, fig.height=4}
+data %>%
+  group_by(`Ball Order`) %>%
+  summarise(Mean = mean(Points)) %>%
+  ggplot() +
+  geom_col(aes(`Ball Order`, Mean)) +
+  scale_x_continuous(limits = c(1, 20)) +
+  labs(x = "Ball", y = "Mean Points")
+```
+
+### Points per Scored Ball
+
+```{r, fig.width=7, fig.height=4}
+data %>%
+  ggplot() +
+  geom_boxplot(aes(`Ball Order`, Points, group = `Ball Order`)) +
+  labs(x = "Ball", y = "Points")
+```
+
+
+Row
+-----
+
+### Frequency of Points Scored
+
+```{r, fig.width = 7, fig.height=4}
+ggplot(data) +
+  geom_histogram(aes(Points), binwidth = 1) +
+  labs(x = "Points", y = "Frequency")
+```
+
+
+### Total Hits per Ball
+
+```{r, fig.width=7, fig.height=4}
+ggplot(data) +
+  geom_bar(aes(`Ball Order`)) +
+  scale_x_continuous(limits = c(1, 20), breaks = seq(1, 20, 1)) +
+  labs(x = "Ball", y = "Hits")
+```
+

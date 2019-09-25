@@ -98,6 +98,7 @@ gamePlot +
 ```
 
 
+
 Ball Data {data-orientation=rows}
 ==========
 Ball-by-ball data only has data recorded for balls where points were scored. Therefore, averages may be overstated as it does include attempts where zero points were scored.
@@ -163,3 +164,17 @@ ggplot(data) +
   labs(x = "Ball", y = "Hits")
 ```
 
+Row
+-----
+
+### Game Score Progression
+
+```{r, fig.width=14, fig.height=5}
+data %>%
+  arrange(`Ball Order`)  %>%
+  group_by(`Game ID`) %>%
+  mutate(CumScore = cumsum(Points)) %>%
+  ggplot() +
+  geom_line(aes(`Ball Order`, CumScore, group = `Game ID`)) +
+  labs(x = "Ball", y = "Score")
+```
